@@ -3,7 +3,8 @@
 var HintBox = function (options) {
 
     this.settings = $.extend({
-        attachToElement: null,
+        attachToElementSelector: null,
+        attachedToElement: null,
         hintText: "",
         width: null,
         height: null,
@@ -16,11 +17,17 @@ var HintBox = function (options) {
         backgroundColor: null
     }, options);
 
-    if (this.settings.attachToElement === null) {
+    this.dataAttributeName = "data-hint-text";
+
+    if (this.settings.attachToElementSelector === null && this.settings.attachedToElement === null) {
         alert("Invalid options passed to HintBox");
     }
-    this.attachedTo = $(this.settings.attachToElement);
-    if (this.attachedTo.length === 0) {
+
+    if (this.settings.attachToElementSelector !== null) {
+        this.settings.attachedToElement = $(this.settings.attachToElementSelector);
+    }
+
+    if (this.settings.attachedToElement.length === 0) {
         alert("Invalid element to attach to for HintBox");
     }
 
@@ -38,20 +45,17 @@ var HintBox = function (options) {
 HintBox.prototype = {
 
     _constructHtml: function () {
+        var hintText = this.settings.hintText;
+        if (!hintText || hintText === null || hintText === "") {
+            hintText = $(this.settings.attachedToElement).attr(this.dataAttributeName);
+        }
         var html = "<div class='hint-box-container'><span>";
-        html += this.settings.hintText;
+        html += hintText;
         html += "</span></div>";
         return html;
     },
 
-    attach: function () {
-
-        var hintBoxHtml = this._constructHtml();
-        var hintEl = $(hintBoxHtml);
-
-        this.attachedTo.parent().append(hintEl);
-        hintEl.hide();
-
+    _setDefaultStylingIfRequired: function (hintEl) {
         if (this.settings.width && this.settings.width !== null) {
             hintEl.css("width", this.settings.width);
         }
@@ -78,19 +82,33 @@ HintBox.prototype = {
         }
 
         //var pos = this.attachedTo.position();
-        var elHeight = $(this.attachedTo)[0].offsetHeight;
-        var elWidth = $(this.attachedTo)[0].offsetWidth;
-        var elTop = $(this.attachedTo)[0].offsetTop;
-        var elLeft = $(this.attachedTo)[0].offsetLeft;
+        var elHeight = $(this.settings.attachedToElement)[0].offsetHeight;
+        var elWidth = $(this.settings.attachedToElement)[0].offsetWidth;
+        var elTop = $(this.settings.attachedToElement)[0].offsetTop;
+        var elLeft = $(this.settings.attachedToElement)[0].offsetLeft;
 
         hintEl.css("position", "absolute");
         hintEl.css("top", elTop + "px");
-        hintEl.css("left", elLeft +elWidth + "px");
+        hintEl.css("left", elLeft + elWidth + "px");
+        hintEl.css("margin", "2px 3px");
+        hintEl.css("padding", "3px 5px");
+    },
 
-        this.attachedTo.focusin(function () {
+    attach: function () {
+
+        var hintBoxHtml = this._constructHtml();
+        var hintEl = $(hintBoxHtml);
+
+        this.settings.attachedToElement.parent().append(hintEl);
+        hintEl.hide();
+
+        this._setDefaultStylingIfRequired(hintEl);
+
+        this.settings.attachedToElement.focusin(function () {
             hintEl.fadeIn("fast");
         }).focusout(function () {
             hintEl.fadeOut("fast");
         });
     }
+
 }
