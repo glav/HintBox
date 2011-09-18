@@ -12,7 +12,8 @@
         var popup2 = new HintBox({
             attachToElementSelector: "#test-input2",
             hintText: "More shit",
-            useDefaultStyle: true
+            useDefaultStyle: true,
+            position:"top-right"
         });
 
         $(".hintBox").each(function () {

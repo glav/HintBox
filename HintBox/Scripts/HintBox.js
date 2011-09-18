@@ -2,6 +2,16 @@
 
 var HintBox = function (options) {
 
+    this._positionOptions = {};
+    this._positionOptions.right = "right";
+    this._positionOptions.left = "left";
+    this._positionOptions.topRight = "top-right";
+    this._positionOptions.bottomRight = "bottom-right";
+    this._positionOptions.topLeft = "top-left";
+    this._positionOptions.bottomLeft = "bottom-left";
+    this._positionOptions.aboveCenter = "above-center";
+    this._positionOptions.belowCenter = "below-center";
+
     this.settings = $.extend({
         attachToElementSelector: null,
         attachedToElement: null,
@@ -14,7 +24,8 @@ var HintBox = function (options) {
         roundedCornerSize: "4px",
         shadowDepth: "4px",
         useDefaultStyle: false,
-        backgroundColor: null
+        backgroundColor: null,
+        position: "auto"  // this could be left, right, top, bottom, top-right etc...
     }, options);
 
     this.dataAttributeName = "data-hint-text";
@@ -55,6 +66,71 @@ HintBox.prototype = {
         return html;
     },
 
+    _setPosition: function (hintEl) {
+        var jQueryEl = $(this.settings.attachedToElement);
+        var elHeight = jQueryEl[0].offsetHeight;
+        var elWidth = jQueryEl[0].offsetWidth;
+        var elTop = jQueryEl[0].offsetTop;
+        var elLeft = jQueryEl[0].offsetLeft;
+
+        hintEl.css("position", "absolute");
+        var topPos = elTop;
+        var leftPos = elLeft + elWidth;
+
+        if (this.settings.position === "auto") {
+
+            // todo: need to dynamically figure this out
+            // If the position is auto, then we shall determine where to put the hint box.
+            // typically we go the right, but re-adjust if the box is outside of the visible window
+
+            var screenWidth = window.innerWidth;
+            var screenHeight = window.innerHeight;
+            if (leftPos + 400 > screenWidth) {
+                hintEl.css("margin-left", "-400px");
+            }
+        } else {
+            hintEl.css("left", "-9999px");  // hide the element offscreen and show it so we can calculate its dimensions
+            hintEl.show();
+
+            // Explicit positioning, so just do what we are told
+            if (this.settings.position === this._positionOptions.right) {
+                // this is default so leave it
+            } else if (this.settings.position === this._positionOptions.bottomRight) {
+                topPos = topPos + elHeight;
+            } else if (this.settings.position === this._positionOptions.topRight) {
+                topPos = topPos - hintEl[0].offsetHeight;
+            } else if (this.settings.position === this._positionOptions.topLeft) {
+                topPos = topPos - hintEl[0].offsetHeight;
+                leftPos = leftPos - elWidth - hintEl[0].offsetWidth;
+            } else if (this.settings.position === this._positionOptions.left) {
+                leftPos = leftPos - elWidth - hintEl[0].offsetWidth;
+            } else if (this.settings.position === this._positionOptions.topLeft) {
+                topPos = topPos - elHeight;
+                leftPos = leftPos - elWidth - hintEl[0].offsetWidth;
+            } else if (this.settings.position === this._positionOptions.bottomLeft) {
+                topPos = topPos + elHeight;
+                leftPos = leftPos - elWidth - hintEl[0].offsetWidth;
+            } else if (this.settings.position === this._positionOptions.aboveCenter) {
+                topPos = topPos - hintEl[0].offsetHeight;
+                var widthDiff = (hintEl[0].offsetWidth - elWidth) / 2;
+                leftPos = (leftPos - elWidth) - widthDiff;
+            } else if (this.settings.position === this._positionOptions.belowCenter) {
+                topPos = topPos + elHeight;
+                var widthDiff = (hintEl[0].offsetWidth - elWidth) / 2;
+                leftPos = (leftPos - elWidth) - widthDiff;
+            }
+
+            hintEl.hide();
+
+        }
+
+
+        hintEl.css("top", topPos + "px");
+        hintEl.css("left", leftPos + "px");
+        hintEl.css("margin", "2px 3px");
+        hintEl.css("padding", "3px 5px");
+    },
+
     _setDefaultStylingIfRequired: function (hintEl) {
         if (this.settings.width && this.settings.width !== null) {
             hintEl.css("width", this.settings.width);
@@ -81,20 +157,12 @@ HintBox.prototype = {
             hintEl.css("-webkit-box-shadow", shadowDefinition);
         }
 
-        //var pos = this.attachedTo.position();
-        var elHeight = $(this.settings.attachedToElement)[0].offsetHeight;
-        var elWidth = $(this.settings.attachedToElement)[0].offsetWidth;
-        var elTop = $(this.settings.attachedToElement)[0].offsetTop;
-        var elLeft = $(this.settings.attachedToElement)[0].offsetLeft;
-
-        hintEl.css("position", "absolute");
-        hintEl.css("top", elTop + "px");
-        hintEl.css("left", elLeft + elWidth + "px");
-        hintEl.css("margin", "2px 3px");
-        hintEl.css("padding", "3px 5px");
+        this._setPosition(hintEl);
     },
 
     attach: function () {
+
+        var self = this;
 
         var hintBoxHtml = this._constructHtml();
         var hintEl = $(hintBoxHtml);
@@ -105,6 +173,7 @@ HintBox.prototype = {
         this._setDefaultStylingIfRequired(hintEl);
 
         this.settings.attachedToElement.focusin(function () {
+            self._setDefaultStylingIfRequired(hintEl);
             hintEl.fadeIn("fast");
         }).focusout(function () {
             hintEl.fadeOut("fast");
